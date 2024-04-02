@@ -14,6 +14,7 @@ import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
 import java.nio.IntBuffer;
 import java.util.Arrays;
+import java.util.Random;
 
 import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL;
@@ -79,6 +80,7 @@ public class ActualWallpaperService extends OpenGLES2WallpaperService {
         }
     }
     public static class Square {
+        public int MAX_DEPTH = 250;
         public int width = 1080;
         public int height = 2408;
         private FloatBuffer vertexBuffer;
@@ -104,7 +106,7 @@ public class ActualWallpaperService extends OpenGLES2WallpaperService {
                 -1.0f,  1.0f, 0.0f, // top left
         };
         private int fragmentBuffer;
-        private int[] tmp_data = new int[width * height];
+        private int[] tmp_data = new int[width * height + 1];
         private IntBuffer data;
 
         int GmDepthHandle;
@@ -120,6 +122,28 @@ public class ActualWallpaperService extends OpenGLES2WallpaperService {
         int GyMaxHandle;
         int MpositionHandle;
         int MtimeHandle;
+        long kgV(int m, int n){
+            if(m == 0 | n == 0)
+            {
+                return 0;
+            } else
+            {
+                if(m > n)
+                {
+                    int tmp = n;
+                    n = m;
+                    m = tmp;
+                }
+                long mCounter = m;
+                while(mCounter <= (long)m * (long)n){
+                    if(mCounter % n == 0){
+                        return mCounter;
+                    }
+                    mCounter += m;
+                }
+                return -1;
+            }
+        }
         public Square(GLRenderer renderer) {
             String code1 = renderer.loadStringFromAssetFile("fragment.glsl");
             String code2 = renderer.loadStringFromAssetFile("compute.glsl");
@@ -151,9 +175,9 @@ public class ActualWallpaperService extends OpenGLES2WallpaperService {
                 fragmentBuffer = tmp.get(0);
                 //GLES31.glBindBufferBase(GLES31.GL_SHADER_STORAGE_BUFFER, 3, fragmentBuffer);
                 GLES31.glBindBufferBase(GLES31.GL_SHADER_STORAGE_BUFFER, 0, fragmentBuffer);
-                Arrays.fill(tmp_data, 10);
+                Arrays.fill(tmp_data, 0);
                 data = IntBuffer.wrap(tmp_data);
-                GLES31.glBufferData(GLES31.GL_SHADER_STORAGE_BUFFER, width * height * 4, data, GLES31.GL_STREAM_DRAW);
+                GLES31.glBufferData(GLES31.GL_SHADER_STORAGE_BUFFER, (width * height + 1) * 4, null, GLES31.GL_STREAM_DRAW);
                 MresHandle = GLES31.glGetUniformLocation(mProgram, "resolution");
                 MmDepthHandle = GLES31.glGetUniformLocation(mProgram, "MAX_DEPTH");
                 MpositionHandle = GLES31.glGetAttribLocation(mProgram, "vPosition");
@@ -178,7 +202,21 @@ public class ActualWallpaperService extends OpenGLES2WallpaperService {
                 //GtimeHandle2 = GLES31.glGetUniformLocation(gProgram, "time");
 
             }
-
+            Random r = new Random(17);
+            int res = 1;
+            do {
+                x_a = r.nextDouble() * 25.0 + 25.0;
+                x_c = r.nextDouble() * 25.0 + 25.0;
+                y_a = r.nextDouble() * 25.0 + 25.0;
+                y_c = r.nextDouble() * 25.0 + 25.0;
+                int tmp1 = (int)(x_a * 100000);
+                int tmp2 = (int)(x_c * 100000);
+                int tmp3 = (int)(y_a * 100000);
+                int tmp4 = (int)(y_c * 100000);
+                int tmp5 = (int)(kgV(tmp1, tmp2) / 10000000000L);
+                int tmp6 = (int)(kgV(tmp3, tmp4) / 10000000000L);
+                res = (int)kgV(tmp5, tmp6);
+            } while (res < 2000000);
         }
 
         private final int vertexCount = triangleCoords.length / COORDS_PER_VERTEX;
@@ -188,49 +226,72 @@ public class ActualWallpaperService extends OpenGLES2WallpaperService {
         private double compTime = 0.0;
         private double fragTime = 0.0;
         private long frames = 0;
+        private float x = -0.55f;
+        private float y = 0.5f;
+        float STEP = 1f;
+//        float t = STEP;
+        double x_a;
+        double x_c;
+        double y_a;
+        double y_c;
+        public static double mapRange(double s, double a1, double a2, double b1, double b2){
+            return b1 + ((s - a1)*(b2 - b1))/(a2 - a1);
+        }
+        private void nextStep(double dtime) {
+            x = (float) mapRange(Math.sin(dtime / x_a) + Math.sin(dtime / x_c), -2, 2, -2, 0.47);
+            y = (float) mapRange(Math.cos(dtime / y_a) + Math.cos(dtime / y_c), -2, 2, -1.12, 1.12);
+        }
         public void draw(long time) {
             long startTime = System.nanoTime();
             double dTime = ((double) time) / 1000.0;
+            nextStep(dTime * STEP);
             GLES31.glUseProgram(gProgram);
             GLES31.glUniform2ui(GresHandle, width, height);
-            GLES31.glUniform1ui(GmDepthHandle, 250);
-            GLES31.glUniform1f(GxHandle, -0.55f);
-            GLES31.glUniform1f(GyHandle, 0.5f);
+            GLES31.glUniform1ui(GmDepthHandle, MAX_DEPTH);
+//            GLES31.glUniform1f(GxHandle, -0.55f);
+//            GLES31.glUniform1f(GyHandle, 0.5f);
+            GLES31.glUniform1f(GxHandle, x);
+            GLES31.glUniform1f(GyHandle, y);
+            Log.d("TAG", "x: " + x + " y: " + y);
             GLES31.glUniform1f(GxMinHandle, 0.0f - (float)width / 1000.0f);
             GLES31.glUniform1f(GxMaxHandle, 0.0f + (float) width / 1000.0f);
             GLES31.glUniform1f(GyMinHandle, 0.0f + (float) height / 1000.0f);
             GLES31.glUniform1f(GyMaxHandle, 0.0f - (float) height / 1000.0f);
             //GLES31.glUniform1f(GtimeHandle2, (float)dTime);
 
+
+            GLES31.glBindBuffer(GLES31.GL_SHADER_STORAGE_BUFFER, fragmentBuffer);
+            IntBuffer tmp = IntBuffer.allocate(4).put(0);
+            tmp.position(0);
+            GLES31.glBufferSubData(GLES31.GL_SHADER_STORAGE_BUFFER, 0, 4, tmp);
+
             //GLES31.glFinish();
             GLES31.glDispatchCompute(width, height, 1);
             GLES31.glMemoryBarrier(GLES31.GL_SHADER_STORAGE_BARRIER_BIT);
             //GLES31.glFinish();
-            //GLES31.glBindBuffer(GLES31.GL_SHADER_STORAGE_BUFFER, fragmentBuffer);
+
+            //WORKS BUT IS INCREDIBLY SLOW (from 1000fps down to 1fps)
+//            GLES31.glBindBuffer(GLES31.GL_SHADER_STORAGE_BUFFER, fragmentBuffer);
 //            ByteBuffer bufff2 = (ByteBuffer) GLES31.glMapBufferRange(GLES31.GL_SHADER_STORAGE_BUFFER, 0, width * height * 4, GLES31.GL_MAP_READ_BIT);
 //            bufff2.order(ByteOrder.nativeOrder());
-//            data = bufff2.asIntBuffer();
-//            StringBuilder s = new StringBuilder();
+//            IntBuffer data = bufff2.asIntBuffer();
+//            int actual_max_dep = 250;
 //            for (int i = 0; i < width * height; i++) {
-//                tmp_data[i] = data.get();
-//                if (i % width == 0) {
-//                    s.append("\n");
+//                int tmp = data.get();
+//                if (tmp > actual_max_dep && tmp != MAX_DEPTH){
+//                    actual_max_dep = tmp;
 //                }
-//                s.append(tmp_data[i]);
-//                s.append(" ");
 //            }
-            //Log.d("TAG", s.toString());
-            //Log.d("TAG", "------------------------------------------------------------");
-//            data = IntBuffer.wrap(tmp_data);
 //            GLES31.glUnmapBuffer(GLES31.GL_SHADER_STORAGE_BUFFER);
+
             // Add program to OpenGL ES environment
             long computeTime = System.nanoTime();
             GLES31.glUseProgram(mProgram);
 
             GLES31.glBindBuffer(GLES31.GL_SHADER_STORAGE_BUFFER, fragmentBuffer);
-            //GLES31.glBufferData(GLES31.GL_SHADER_STORAGE_BUFFER, width * height * 4, data, GLES31.GL_STREAM_DRAW);
+
             GLES31.glUniform2ui(MresHandle,width,height);
-            GLES31.glUniform1ui(MmDepthHandle,250);
+            GLES31.glUniform1ui(MmDepthHandle,MAX_DEPTH);
             GLES31.glUniform1f(MtimeHandle, (float)dTime);
 
             // Enable a handle to the triangle vertices
@@ -254,13 +315,13 @@ public class ActualWallpaperService extends OpenGLES2WallpaperService {
             fragTime = ((endTime - computeTime) + frames * fragTime) / (double)(frames + 1);
 
             frames++;
-            if(frames % 1000 == 0) {
+
                 Log.d("TAG", "FrameTime: " + frameTime + "ns");
                 Log.d("TAG", "Compute: " + compTime + "ns");
                 Log.d("TAG", "Fragment: " + fragTime + "ns");
                 Log.d("TAG", "FPS: " + (int) (1000000000.0 / frameTime) + " Frames: " + frames);
                 Log.d("TAG", "--------------------------------------------------");
-            }
+
         }
 
     }

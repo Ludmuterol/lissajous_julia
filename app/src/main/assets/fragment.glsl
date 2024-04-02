@@ -7,6 +7,7 @@ uniform uvec2 resolution;
 uniform uint MAX_DEPTH;
 uniform float time;
 layout(binding = 0, std430) buffer SSBO {
+    uint max_depth;
     uint depths[];
 };
 
@@ -23,7 +24,7 @@ void main() {
     vec3 col = vec3(20.0/255.0);
     float depth = float(depths[arrpos]);
     if ( depth < float(MAX_DEPTH)) {
-        float dep = map(depth, 0.0, float(MAX_DEPTH - 1u), 20.0 / 255.0, 1.0);
+        float dep = map(depth, 0.0, float(max_depth), 20.0 / 255.0, 1.0);
         col = vec3((sin(time / 2.0) + 1.0) / 2.0, (sin(time / 2.0 + 2.0) + 1.0) / 2.0, (sin(time / 2.0 + 4.0) + 1.0) / 2.0) * dep;
     }
     //FragColor = vec4(map(float(arrpos),0.0, float(resolution.x * resolution.y), 0.0, 1.0));
