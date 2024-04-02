@@ -12,10 +12,12 @@ uniform float yMax;
 uniform float x;
 uniform float y;
 layout(binding = 0, std430) buffer SSBO {
-    uint max_depth;
     uint depths[];
 };
-
+layout(binding = 1, std430) buffer SSBO2 {
+    uint total;
+    uint counts[];
+};
 float map(float value, float min1, float max1, float min2, float max2) {
     return min2 + (value - min1) * (max2 - min2) / (max1 - min1);
 }
@@ -46,8 +48,10 @@ void main() {
 
     vec2 position = vec2(float(storePos.x) / float(gWidth), float(storePos.y) / float(gHeight));
     uint depth = julia(map(position.x, 0.0, 1.0, xMin, xMax), map(position.y, 0.0, 1.0, yMin, yMax));
-    if (depth != MAX_DEPTH) {
-        atomicMax(max_depth, depth);
+
+    if ( depth < MAX_DEPTH) {
+        atomicAdd(counts[depth], 1u);
+        atomicAdd(total, 1u);
     }
     depths[offset] = depth;
     //depths[offset] = uint(float(MAX_DEPTH - 1u) * position.x  * (1.0 - position.y) );//+ (sin(time / 2.0) + 1.0) / 2.0 * 100.0);

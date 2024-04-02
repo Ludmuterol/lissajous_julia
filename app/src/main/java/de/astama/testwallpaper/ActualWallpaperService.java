@@ -1,14 +1,12 @@
 package de.astama.testwallpaper;
 
 import android.opengl.GLES31;
-import android.opengl.GLES32;
 import android.opengl.GLSurfaceView;
 import android.util.Log;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
@@ -17,7 +15,6 @@ import java.util.Arrays;
 import java.util.Random;
 
 import javax.microedition.khronos.egl.EGLConfig;
-import javax.microedition.khronos.opengles.GL;
 import javax.microedition.khronos.opengles.GL10;
 
 public class ActualWallpaperService extends OpenGLES2WallpaperService {
@@ -105,9 +102,10 @@ public class ActualWallpaperService extends OpenGLES2WallpaperService {
                 1.0f,  1.0f, 0.0f,  // top right
                 -1.0f,  1.0f, 0.0f, // top left
         };
-        private int fragmentBuffer;
-        private int[] tmp_data = new int[width * height + 1];
-        private IntBuffer data;
+        private int depthArray;
+        private int depthCounts;
+//        private int[] tmp_data = new int[width * height + 1];
+//        private IntBuffer data;
 
         int GmDepthHandle;
         int GresHandle;
@@ -170,14 +168,20 @@ public class ActualWallpaperService extends OpenGLES2WallpaperService {
             GLES31.glUseProgram(mProgram);
 
             {
-                IntBuffer tmp = IntBuffer.allocate(1);
-                GLES31.glGenBuffers(1, tmp);
-                fragmentBuffer = tmp.get(0);
+                IntBuffer tmp = IntBuffer.allocate(2);
+                GLES31.glGenBuffers(2, tmp);
+                depthArray = tmp.get(0);
+                depthCounts = tmp.get(1);
                 //GLES31.glBindBufferBase(GLES31.GL_SHADER_STORAGE_BUFFER, 3, fragmentBuffer);
-                GLES31.glBindBufferBase(GLES31.GL_SHADER_STORAGE_BUFFER, 0, fragmentBuffer);
-                Arrays.fill(tmp_data, 0);
-                data = IntBuffer.wrap(tmp_data);
-                GLES31.glBufferData(GLES31.GL_SHADER_STORAGE_BUFFER, (width * height + 1) * 4, null, GLES31.GL_STREAM_DRAW);
+
+                GLES31.glBindBufferBase(GLES31.GL_SHADER_STORAGE_BUFFER, 0, depthArray);
+//                Arrays.fill(tmp_data, 0);
+//                data = IntBuffer.wrap(tmp_data);
+                GLES31.glBufferData(GLES31.GL_SHADER_STORAGE_BUFFER, (width * height) * 4, null, GLES31.GL_STREAM_DRAW);
+                GLES31.glBindBufferBase(GLES31.GL_SHADER_STORAGE_BUFFER, 1, depthCounts);
+                //when width * height < MAX_DEPTH error
+                GLES31.glBufferData(GLES31.GL_SHADER_STORAGE_BUFFER, (MAX_DEPTH + 2) * 4, null, GLES31.GL_STREAM_DRAW);
+
                 MresHandle = GLES31.glGetUniformLocation(mProgram, "resolution");
                 MmDepthHandle = GLES31.glGetUniformLocation(mProgram, "MAX_DEPTH");
                 MpositionHandle = GLES31.glGetAttribLocation(mProgram, "vPosition");
@@ -260,10 +264,11 @@ public class ActualWallpaperService extends OpenGLES2WallpaperService {
             //GLES31.glUniform1f(GtimeHandle2, (float)dTime);
 
 
-            GLES31.glBindBuffer(GLES31.GL_SHADER_STORAGE_BUFFER, fragmentBuffer);
-            IntBuffer tmp = IntBuffer.allocate(4).put(0);
-            tmp.position(0);
-            GLES31.glBufferSubData(GLES31.GL_SHADER_STORAGE_BUFFER, 0, 4, tmp);
+            GLES31.glBindBuffer(GLES31.GL_SHADER_STORAGE_BUFFER, depthCounts);
+            int[] arr = new int[MAX_DEPTH + 2];
+            Arrays.fill(arr, 0);
+            IntBuffer tmp2 = IntBuffer.wrap(arr);
+            GLES31.glBufferSubData(GLES31.GL_SHADER_STORAGE_BUFFER, 0, (MAX_DEPTH + 2) * 4, tmp2);
 
             //GLES31.glFinish();
             GLES31.glDispatchCompute(width, height, 1);
@@ -288,7 +293,7 @@ public class ActualWallpaperService extends OpenGLES2WallpaperService {
             long computeTime = System.nanoTime();
             GLES31.glUseProgram(mProgram);
 
-            GLES31.glBindBuffer(GLES31.GL_SHADER_STORAGE_BUFFER, fragmentBuffer);
+            GLES31.glBindBuffer(GLES31.GL_SHADER_STORAGE_BUFFER, depthArray);
 
             GLES31.glUniform2ui(MresHandle,width,height);
             GLES31.glUniform1ui(MmDepthHandle,MAX_DEPTH);
