@@ -2,7 +2,9 @@ package de.astama.testwallpaper;
 
 import android.opengl.GLES31;
 import android.opengl.GLSurfaceView;
+import android.os.SystemClock;
 import android.util.Log;
+import android.view.View;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -226,10 +228,10 @@ public class ActualWallpaperService extends OpenGLES2WallpaperService {
         private final int vertexCount = triangleCoords.length / COORDS_PER_VERTEX;
         private final int vertexStride = COORDS_PER_VERTEX * 4; // 4 bytes per vertex
 
-        private double frameTime = 0.0;
-        private double compTime = 0.0;
-        private double fragTime = 0.0;
-        private long frames = 0;
+//        private double frameTime = 0.0;
+//        private double compTime = 0.0;
+//        private double fragTime = 0.0;
+//        private long frames = 0;
         private float x = -0.55f;
         private float y = 0.5f;
         float STEP = 1f;
@@ -246,7 +248,7 @@ public class ActualWallpaperService extends OpenGLES2WallpaperService {
             y = (float) mapRange(Math.cos(dtime / y_a) + Math.cos(dtime / y_c), -2, 2, -1.12, 1.12);
         }
         public void draw(long time) {
-            long startTime = System.nanoTime();
+            long startTime = System.currentTimeMillis();
             double dTime = ((double) time) / 1000.0;
             nextStep(dTime * STEP);
             GLES31.glUseProgram(gProgram);
@@ -276,7 +278,7 @@ public class ActualWallpaperService extends OpenGLES2WallpaperService {
             //GLES31.glFinish();
 
             // Add program to OpenGL ES environment
-            long computeTime = System.nanoTime();
+            //long computeTime = System.nanoTime();
             GLES31.glUseProgram(mProgram);
 
             GLES31.glBindBuffer(GLES31.GL_SHADER_STORAGE_BUFFER, depthArray);
@@ -299,19 +301,20 @@ public class ActualWallpaperService extends OpenGLES2WallpaperService {
 
             // Disable vertex array
             GLES31.glDisableVertexAttribArray(MpositionHandle);
-            long endTime = System.nanoTime();
+            long frameTime = System.currentTimeMillis() - startTime;
+            SystemClock.sleep(1000 / 30 - frameTime); // Target 30fps
 
-            frameTime = ((endTime - startTime) + frames * frameTime) / (double)(frames + 1);
-            compTime = ((computeTime - startTime) + frames * compTime) / (double)(frames + 1);
-            fragTime = ((endTime - computeTime) + frames * fragTime) / (double)(frames + 1);
+//            frameTime = ((endTime - startTime) + frames * frameTime) / (double)(frames + 1);
+//            compTime = ((computeTime - startTime) + frames * compTime) / (double)(frames + 1);
+//            fragTime = ((endTime - computeTime) + frames * fragTime) / (double)(frames + 1);
+//
+//            frames++;
 
-            frames++;
-
-                Log.d("TAG", "FrameTime: " + frameTime + "ns");
-                Log.d("TAG", "Compute: " + compTime + "ns");
-                Log.d("TAG", "Fragment: " + fragTime + "ns");
-                Log.d("TAG", "FPS: " + (int) (1000000000.0 / frameTime) + " Frames: " + frames);
-                Log.d("TAG", "--------------------------------------------------");
+//                Log.d("TAG", "FrameTime: " + frameTime + "ns");
+//                Log.d("TAG", "Compute: " + compTime + "ns");
+//                Log.d("TAG", "Fragment: " + fragTime + "ns");
+//                Log.d("TAG", "FPS: " + (int) (1000000000.0 / frameTime) + " Frames: " + frames);
+//                Log.d("TAG", "--------------------------------------------------");
 
         }
 
