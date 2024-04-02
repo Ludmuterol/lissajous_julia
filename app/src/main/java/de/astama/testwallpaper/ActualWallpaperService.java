@@ -184,7 +184,12 @@ public class ActualWallpaperService extends OpenGLES2WallpaperService {
         private final int vertexCount = triangleCoords.length / COORDS_PER_VERTEX;
         private final int vertexStride = COORDS_PER_VERTEX * 4; // 4 bytes per vertex
 
+        private double frameTime = 0.0;
+        private double compTime = 0.0;
+        private double fragTime = 0.0;
+        private long frames = 0;
         public void draw(long time) {
+            long startTime = System.nanoTime();
             double dTime = ((double) time) / 1000.0;
             GLES31.glUseProgram(gProgram);
             GLES31.glUniform2ui(GresHandle, width, height);
@@ -219,6 +224,7 @@ public class ActualWallpaperService extends OpenGLES2WallpaperService {
 //            data = IntBuffer.wrap(tmp_data);
 //            GLES31.glUnmapBuffer(GLES31.GL_SHADER_STORAGE_BUFFER);
             // Add program to OpenGL ES environment
+            long computeTime = System.nanoTime();
             GLES31.glUseProgram(mProgram);
 
             GLES31.glBindBuffer(GLES31.GL_SHADER_STORAGE_BUFFER, fragmentBuffer);
@@ -241,6 +247,20 @@ public class ActualWallpaperService extends OpenGLES2WallpaperService {
 
             // Disable vertex array
             GLES31.glDisableVertexAttribArray(MpositionHandle);
+            long endTime = System.nanoTime();
+
+            frameTime = ((endTime - startTime) + frames * frameTime) / (double)(frames + 1);
+            compTime = ((computeTime - startTime) + frames * compTime) / (double)(frames + 1);
+            fragTime = ((endTime - computeTime) + frames * fragTime) / (double)(frames + 1);
+
+            frames++;
+            if(frames % 1000 == 0) {
+                Log.d("TAG", "FrameTime: " + frameTime + "ns");
+                Log.d("TAG", "Compute: " + compTime + "ns");
+                Log.d("TAG", "Fragment: " + fragTime + "ns");
+                Log.d("TAG", "FPS: " + (int) (1000000000.0 / frameTime) + " Frames: " + frames);
+                Log.d("TAG", "--------------------------------------------------");
+            }
         }
 
     }
