@@ -7,7 +7,7 @@ uniform uvec2 resolution;
 uniform uint MAX_DEPTH;
 uniform float time;
 layout(binding = 0, std430) buffer SSBO {
-    uint depths[];
+    float depths[];
 };
 layout(binding = 1, std430) buffer SSBO2 {
     uint total;
@@ -30,12 +30,13 @@ void main() {
     uvec2 offsetFragCoord = uvec2(gl_FragCoord.xy - vec2(0.5));
     uint arrpos = offsetFragCoord.x + offsetFragCoord.y * resolution.x;
     vec3 col = vec3(0.0);
-    uint depth = depths[arrpos];
+    float depth = depths[arrpos];
     float hue = 0.0;
-    for (uint i = 0u; i <= depth; i++) {
+    for (uint i = 0u; i <= uint(depth); i++) {
         hue += float(counts[i]) / float(total);
     }
-    if ( depth < MAX_DEPTH) {
+    hue += fract(depth) * float(counts[uint(depth) + 1u]) / float(total);
+    if ( uint(depth) < MAX_DEPTH) {
         //float dep = map(depth, 0.0, float(max_depth), 20.0 / 255.0, 1.0);
         //col = vec3((sin(time / 2.0) + 1.0) / 2.0, (sin(time / 2.0 + 2.0) + 1.0) / 2.0, (sin(time / 2.0 + 4.0) + 1.0) / 2.0) * hue;
         if(hue < 0.2) {

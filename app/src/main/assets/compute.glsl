@@ -12,7 +12,7 @@ uniform float yMax;
 uniform float x;
 uniform float y;
 layout(binding = 0, std430) buffer SSBO {
-    uint depths[];
+    float depths[];
 };
 layout(binding = 1, std430) buffer SSBO2 {
     uint total;
@@ -22,18 +22,21 @@ float map(float value, float min1, float max1, float min2, float max2) {
     return min2 + (value - min1) * (max2 - min2) / (max1 - min1);
 }
 
-uint julia(float yt, float xt) {
+float julia(float yt, float xt) {
     float x2 = xt * xt;
     float y2 = yt * yt;
     uint depth = 0u;
-    while (x2 + y2 <= 4.0 && depth < MAX_DEPTH){
+    while (x2 + y2 <= 256.0 && depth < MAX_DEPTH){
         yt = (xt + xt) * yt + y;
         xt = x2 - y2 + x;
         x2 = xt * xt;
         y2 = yt * yt;
         depth++;
     }
-    return depth;
+    //Make colors smooth
+    float log_zn = log(x2 + y2) / 2.0;
+    float nu = log(log_zn / log(2.0)) / log(2.0);
+    return float(depth) + 1.0 - nu;
 }
 
 void main() {
@@ -47,10 +50,10 @@ void main() {
     uint offset = storePos.y * gWidth + storePos.x;
 
     vec2 position = vec2(float(storePos.x) / float(gWidth), float(storePos.y) / float(gHeight));
-    uint depth = julia(map(position.x, 0.0, 1.0, xMin, xMax), map(position.y, 0.0, 1.0, yMin, yMax));
+    float depth = julia(map(position.x, 0.0, 1.0, xMin, xMax), map(position.y, 0.0, 1.0, yMin, yMax));
 
-    if ( depth < MAX_DEPTH) {
-        atomicAdd(counts[depth], 1u);
+    if ( depth < float(MAX_DEPTH)) {
+        atomicAdd(counts[uint(depth)], 1u);
         atomicAdd(total, 1u);
     }
     depths[offset] = depth;

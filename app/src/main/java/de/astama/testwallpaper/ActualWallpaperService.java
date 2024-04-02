@@ -275,20 +275,6 @@ public class ActualWallpaperService extends OpenGLES2WallpaperService {
             GLES31.glMemoryBarrier(GLES31.GL_SHADER_STORAGE_BARRIER_BIT);
             //GLES31.glFinish();
 
-            //WORKS BUT IS INCREDIBLY SLOW (from 1000fps down to 1fps)
-//            GLES31.glBindBuffer(GLES31.GL_SHADER_STORAGE_BUFFER, fragmentBuffer);
-//            ByteBuffer bufff2 = (ByteBuffer) GLES31.glMapBufferRange(GLES31.GL_SHADER_STORAGE_BUFFER, 0, width * height * 4, GLES31.GL_MAP_READ_BIT);
-//            bufff2.order(ByteOrder.nativeOrder());
-//            IntBuffer data = bufff2.asIntBuffer();
-//            int actual_max_dep = 250;
-//            for (int i = 0; i < width * height; i++) {
-//                int tmp = data.get();
-//                if (tmp > actual_max_dep && tmp != MAX_DEPTH){
-//                    actual_max_dep = tmp;
-//                }
-//            }
-//            GLES31.glUnmapBuffer(GLES31.GL_SHADER_STORAGE_BUFFER);
-
             // Add program to OpenGL ES environment
             long computeTime = System.nanoTime();
             GLES31.glUseProgram(mProgram);
