@@ -258,7 +258,7 @@ public class ActualWallpaperService extends OpenGLES2WallpaperService {
 //            GLES31.glUniform1f(GyHandle, 0.5f);
             GLES31.glUniform1f(GxHandle, x);
             GLES31.glUniform1f(GyHandle, y);
-            Log.d("TAG", "x: " + x + " y: " + y);
+            //Log.d("TAG", "x: " + x + " y: " + y);
             GLES31.glUniform1f(GxMinHandle, 0.0f - (float)width / 1000.0f);
             GLES31.glUniform1f(GxMaxHandle, 0.0f + (float) width / 1000.0f);
             GLES31.glUniform1f(GyMinHandle, 0.0f + (float) height / 1000.0f);
@@ -302,7 +302,7 @@ public class ActualWallpaperService extends OpenGLES2WallpaperService {
             // Disable vertex array
             GLES31.glDisableVertexAttribArray(MpositionHandle);
             long frameTime = System.currentTimeMillis() - startTime;
-            SystemClock.sleep(1000 / 30 - frameTime); // Target 30fps
+            SystemClock.sleep(1000 / 30 - Math.max(frameTime, 0)); // Target 30fps
 
 //            frameTime = ((endTime - startTime) + frames * frameTime) / (double)(frames + 1);
 //            compTime = ((computeTime - startTime) + frames * compTime) / (double)(frames + 1);
