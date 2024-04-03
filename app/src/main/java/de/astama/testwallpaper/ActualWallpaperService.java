@@ -208,7 +208,7 @@ public class ActualWallpaperService extends OpenGLES2WallpaperService {
                 //GtimeHandle2 = GLES31.glGetUniformLocation(gProgram, "time");
 
             }
-            Random r = new Random(17);
+            Random r = new Random();
             int res = 1;
             do {
                 x_a = r.nextDouble() * 25.0 + 25.0;
@@ -228,10 +228,10 @@ public class ActualWallpaperService extends OpenGLES2WallpaperService {
         private final int vertexCount = triangleCoords.length / COORDS_PER_VERTEX;
         private final int vertexStride = COORDS_PER_VERTEX * 4; // 4 bytes per vertex
 
-//        private double frameTime = 0.0;
-//        private double compTime = 0.0;
-//        private double fragTime = 0.0;
-//        private long frames = 0;
+        private double frameTime = 0.0;
+        private double compTime = 0.0;
+        private double fragTime = 0.0;
+        private long frames = 0;
         private float x = -0.55f;
         private float y = 0.5f;
         float STEP = 1f;
@@ -248,7 +248,8 @@ public class ActualWallpaperService extends OpenGLES2WallpaperService {
             y = (float) mapRange(Math.cos(dtime / y_a) + Math.cos(dtime / y_c), -2, 2, -1.12, 1.12);
         }
         public void draw(long time) {
-            long startTime = System.currentTimeMillis();
+            long starttmpTime = System.currentTimeMillis();
+            long startTime = System.nanoTime();
             double dTime = ((double) time) / 1000.0;
             nextStep(dTime * STEP);
             GLES31.glUseProgram(gProgram);
@@ -278,7 +279,7 @@ public class ActualWallpaperService extends OpenGLES2WallpaperService {
             //GLES31.glFinish();
 
             // Add program to OpenGL ES environment
-            //long computeTime = System.nanoTime();
+            long computeTime = System.nanoTime();
             GLES31.glUseProgram(mProgram);
 
             GLES31.glBindBuffer(GLES31.GL_SHADER_STORAGE_BUFFER, depthArray);
@@ -301,8 +302,11 @@ public class ActualWallpaperService extends OpenGLES2WallpaperService {
 
             // Disable vertex array
             GLES31.glDisableVertexAttribArray(MpositionHandle);
-            long frameTime = System.currentTimeMillis() - startTime;
-            SystemClock.sleep(1000 / 30 - Math.max(frameTime, 0)); // Target 30fps
+            long endTime = System.nanoTime();
+
+            long frametmpTime = System.currentTimeMillis() - starttmpTime;
+            SystemClock.sleep(1000 / 30 - Math.max(frametmpTime, 0)); // Target 30fps
+
 
 //            frameTime = ((endTime - startTime) + frames * frameTime) / (double)(frames + 1);
 //            compTime = ((computeTime - startTime) + frames * compTime) / (double)(frames + 1);
