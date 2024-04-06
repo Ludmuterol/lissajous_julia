@@ -1,10 +1,17 @@
 package de.astama.testwallpaper;
 
+import android.content.Context;
+import android.content.SharedPreferences;
+import android.graphics.Color;
 import android.opengl.GLES31;
 import android.opengl.GLSurfaceView;
 import android.os.SystemClock;
 import android.util.Log;
-import android.view.View;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.preference.Preference;
+import androidx.preference.PreferenceManager;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -33,7 +40,7 @@ public class ActualWallpaperService extends OpenGLES2WallpaperService {
         @Override
         public void onSurfaceCreated(GL10 gl, EGLConfig config) {
             time = System.currentTimeMillis();
-            square = new Square(this);
+            square = new Square(this, getApplicationContext());
         }
 
         @Override
@@ -78,10 +85,11 @@ public class ActualWallpaperService extends OpenGLES2WallpaperService {
             }
         }
     }
-    public static class Square {
+    public static class Square implements SharedPreferences.OnSharedPreferenceChangeListener{
         public int MAX_DEPTH = 250;
         public int width = 1080;
         public int height = 2408;
+        private Context cont;
         private FloatBuffer vertexBuffer;
 
         private final String vertexShaderCode =
@@ -106,6 +114,7 @@ public class ActualWallpaperService extends OpenGLES2WallpaperService {
         };
         private int depthArray;
         private int depthCounts;
+        private int colourArray;
 //        private int[] tmp_data = new int[width * height + 1];
 //        private IntBuffer data;
 
@@ -144,7 +153,10 @@ public class ActualWallpaperService extends OpenGLES2WallpaperService {
                 return -1;
             }
         }
-        public Square(GLRenderer renderer) {
+        public Square(GLRenderer renderer, Context context) {
+            cont = context;
+            PreferenceManager.getDefaultSharedPreferences(cont).registerOnSharedPreferenceChangeListener(this);
+
             String code1 = renderer.loadStringFromAssetFile("fragment.glsl");
             String code2 = renderer.loadStringFromAssetFile("compute.glsl");
             // initialize vertex byte buffer for shape coordinates
@@ -170,10 +182,11 @@ public class ActualWallpaperService extends OpenGLES2WallpaperService {
             GLES31.glUseProgram(mProgram);
 
             {
-                IntBuffer tmp = IntBuffer.allocate(2);
-                GLES31.glGenBuffers(2, tmp);
+                IntBuffer tmp = IntBuffer.allocate(3);
+                GLES31.glGenBuffers(3, tmp);
                 depthArray = tmp.get(0);
                 depthCounts = tmp.get(1);
+                colourArray = tmp.get(2);
                 //GLES31.glBindBufferBase(GLES31.GL_SHADER_STORAGE_BUFFER, 3, fragmentBuffer);
 
                 GLES31.glBindBufferBase(GLES31.GL_SHADER_STORAGE_BUFFER, 0, depthArray);
@@ -183,7 +196,27 @@ public class ActualWallpaperService extends OpenGLES2WallpaperService {
                 GLES31.glBindBufferBase(GLES31.GL_SHADER_STORAGE_BUFFER, 1, depthCounts);
                 //when width * height < MAX_DEPTH error
                 GLES31.glBufferData(GLES31.GL_SHADER_STORAGE_BUFFER, (MAX_DEPTH + 2) * 4, null, GLES31.GL_STREAM_DRAW);
-
+                GLES31.glBindBufferBase(GLES31.GL_SHADER_STORAGE_BUFFER, 2, colourArray);
+                SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(cont);
+                int len = Integer.parseInt(sp.getString("size", ""));
+                GLES31.glBufferData(GLES31.GL_SHADER_STORAGE_BUFFER, (len * 3 + 1) * 4, null, GLES31.GL_STREAM_DRAW);
+                {
+                    ByteBuffer data = ByteBuffer.allocate((len * 3 + 1) * 4);
+                    data.order(ByteOrder.nativeOrder());
+                    FloatBuffer data2 = data.asFloatBuffer();
+                    data2.put(len);
+                    for (int i = 0; i < len; i++){
+                        String colorStr = sp.getString("" + i, "");
+                        int r = Integer.valueOf( colorStr.substring( 1, 3 ), 16 );
+                        int g = Integer.valueOf( colorStr.substring( 3, 5 ), 16 );
+                        int b = Integer.valueOf( colorStr.substring( 5, 7 ), 16 );
+                        data2.put(r / 255.0f);
+                        data2.put(g / 255.0f);
+                        data2.put(b / 255.0f);
+                    }
+                    data2.position(0);
+                    GLES31.glBufferSubData(GLES31.GL_SHADER_STORAGE_BUFFER, 0, (len * 3 + 1) * 4, data);
+                }
                 MresHandle = GLES31.glGetUniformLocation(mProgram, "resolution");
                 MmDepthHandle = GLES31.glGetUniformLocation(mProgram, "MAX_DEPTH");
                 MpositionHandle = GLES31.glGetAttribLocation(mProgram, "vPosition");
@@ -259,7 +292,7 @@ public class ActualWallpaperService extends OpenGLES2WallpaperService {
 //            GLES31.glUniform1f(GyHandle, 0.5f);
             GLES31.glUniform1f(GxHandle, x);
             GLES31.glUniform1f(GyHandle, y);
-            //Log.d("TAG", "x: " + x + " y: " + y);
+
             GLES31.glUniform1f(GxMinHandle, 0.0f - (float)width / 1000.0f);
             GLES31.glUniform1f(GxMaxHandle, 0.0f + (float) width / 1000.0f);
             GLES31.glUniform1f(GyMinHandle, 0.0f + (float) height / 1000.0f);
@@ -282,6 +315,7 @@ public class ActualWallpaperService extends OpenGLES2WallpaperService {
             long computeTime = System.nanoTime();
             GLES31.glUseProgram(mProgram);
 
+            GLES31.glBindBuffer(GLES31.GL_SHADER_STORAGE_BUFFER, colourArray);
             GLES31.glBindBuffer(GLES31.GL_SHADER_STORAGE_BUFFER, depthArray);
 
             GLES31.glUniform2ui(MresHandle,width,height);
@@ -305,7 +339,7 @@ public class ActualWallpaperService extends OpenGLES2WallpaperService {
             long endTime = System.nanoTime();
 
             long frametmpTime = System.currentTimeMillis() - starttmpTime;
-            SystemClock.sleep(1000 / 30 - Math.max(frametmpTime, 0)); // Target 30fps
+            SystemClock.sleep(Math.max(1000 / 30 - frametmpTime, 0)); // Target 30fps
 
 
 //            frameTime = ((endTime - startTime) + frames * frameTime) / (double)(frames + 1);
@@ -322,5 +356,30 @@ public class ActualWallpaperService extends OpenGLES2WallpaperService {
 
         }
 
+        @Override
+        public void onSharedPreferenceChanged(SharedPreferences sp, @Nullable String key) {
+//            GLES31.glBindBuffer(GLES31.GL_SHADER_STORAGE_BUFFER, colourArray);
+//            int len = Integer.parseInt(sp.getString("size", ""));
+//
+//            ByteBuffer data = ByteBuffer.allocate((len * 3 + 1) * 4);
+//            data.order(ByteOrder.nativeOrder());
+//            FloatBuffer data2 = data.asFloatBuffer();
+//            data2.put(len);
+//            for (int i = 0; i < len; i++){
+//                String colorStr = sp.getString("" + i, "");
+//                int r = Integer.valueOf( colorStr.substring( 1, 3 ), 16 );
+//                int g = Integer.valueOf( colorStr.substring( 3, 5 ), 16 );
+//                int b = Integer.valueOf( colorStr.substring( 5, 7 ), 16 );
+//                Log.d("PREFERENCE", len + "<-len " + i + ": " + sp.getString("" + i, "")+" -> "+ r + " " + g + " " + b);
+//                data2.put(r / 255.0f);
+//                data2.put(g / 255.0f);
+//                data2.put(b / 255.0f);
+//            }
+//            Log.d("PREFERENCE", "-------------------");
+//            //GLES31.glBufferSubData(GLES31.GL_SHADER_STORAGE_BUFFER, 0, (len * 3 + 1) * 4, data);
+//            data.position(0);
+//            GLES31.glBufferData(GLES31.GL_SHADER_STORAGE_BUFFER, (len * 3 + 1) * 4, data, GLES31.GL_STREAM_DRAW);
+//            //GLES31.glBindBufferBase(GLES31.GL_SHADER_STORAGE_BUFFER, 2, colourArray);
+        }
     }
 }

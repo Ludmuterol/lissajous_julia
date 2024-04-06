@@ -35,6 +35,11 @@
                 android:resource="@xml/wallpaper">
             </meta-data>
         </service>
+        <activity android:name="de.astama.testwallpaper.MySettingsActivity"
+            android:label="Settings"
+            android:theme="@style/Theme.AppCompat"
+            android:exported="true">
+        </activity>
     </application>
 
 </manifest>

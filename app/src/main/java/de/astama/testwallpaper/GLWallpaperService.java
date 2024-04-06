@@ -1,6 +1,7 @@
 package de.astama.testwallpaper;
 
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.opengl.GLSurfaceView;
 import android.service.wallpaper.WallpaperService;
 import android.view.SurfaceHolder;

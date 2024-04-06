@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+    <EditTextPreference
+        android:key="size"
+        android:title="3"
+        android:enabled="false">
+
+    </EditTextPreference>
+    <Preference
+        android:key="increase"
+        android:title="Increase Colour Amount" />
+    <Preference
+        android:key="decrease"
+        android:title="Decrease Colour Amount" />
+
+    <PreferenceCategory
+        android:key="colours"
+        android:title="Colours">
+
+    </PreferenceCategory>
+
+</PreferenceScreen>
